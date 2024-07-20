@@ -1,4 +1,6 @@
 ﻿#include "../exercise.h"
+#include<cstring>
+#include<cmath>
 
 // READ: 类模板 <https://zh.cppreference.com/w/cpp/language/class_template>
 
@@ -8,10 +10,14 @@ struct Tensor4D {
     T *data;
 
     Tensor4D(unsigned int const shape_[4], T const *data_) {
-        unsigned int size = 1;
+        unsigned int size = shape_[0] * shape_[1] *shape_[2]*shape_[3];
         // TODO: 填入正确的 shape 并计算 size
+				printf("size=%d, sizeof=%d\n", size, sizeof(T));
+				printf("data_0=%d\n", data_[0]);
         data = new T[size];
-        std::memcpy(data, data_, size * sizeof(T));
+				printf("data=%p\n", data);
+        memcpy(data, data_, size * sizeof(T));
+				memcpy(shape, shape_, 4 * sizeof(unsigned int));
     }
     ~Tensor4D() {
         delete[] data;
@@ -28,6 +34,47 @@ struct Tensor4D {
     // 则 `this` 与 `others` 相加时，3 个形状为 `[1, 2, 1, 4]` 的子张量各自与 `others` 对应项相加。
     Tensor4D &operator+=(Tensor4D const &others) {
         // TODO: 实现单向广播的加法
+				int wei[4]={1,1,1,1},weo[4]={1,1,1,1};
+				bool expand[4]={0,0,0,0};
+				for(int i=2;i>=0;i--){
+					wei[i] = wei[i+1] * shape[i+1];
+					weo[i] = weo[i+1] * others.shape[i+1];
+				}
+				int dim = -1;
+				for(int i=0;i<4;i++){
+					if(shape[i]!=others.shape[i] && others.shape[i]==1){
+						dim = i;
+						expand[i]=1;
+					}
+				}
+				int size = wei[0] * shape[0];
+				if(dim==-1){
+					for(int i=0;i<size;i++) data[i] += others.data[i];
+					return *this;
+				}
+
+				printf("size=%d, sizeof=%d, others.data=%p, data=%p, others.shape=%p\n", size, sizeof(T), others.data, data, others.shape);
+				for(int i=0;i<size;i++){
+					int c=i;
+					int coo[4],j=0;
+					for(int k=0;k<4;k++){
+						coo[k]=c/wei[k];
+						c%=wei[k];
+					}
+					for(int k=0;k<4;k++){
+						if(expand[k]) coo[k]=0;
+						j+=coo[k] * weo[k];
+					}
+					printf("i=%d\n",i);
+					for(int k=0;k<4;k++){
+						printf("%d,", coo[k]);
+					}
+					printf("j=%d, others=%p, data=%p\n",j, &others, others.data);
+					printf("data=%p, ", others.data);
+	
+					data[i] += others.data[j];
+				}
+				printf("return\n");
         return *this;
     }
 };
@@ -79,9 +126,11 @@ int main(int argc, char **argv) {
 
         auto t0 = Tensor4D(s0, d0);
         auto t1 = Tensor4D(s1, d1);
+				printf("add\n");
         t0 += t1;
+				printf("added\n");
         for (unsigned int i = 0; i < sizeof(d0) / sizeof(int); i++) {
-            ASSERT(t0.data[i] == 7.f, "Every element of t0 should be 7 after adding t1 to it.");
+            ASSERT( fabs(t0.data[i] - 7.f)<1e-5, "Every element of t0 should be 7 after adding t1 to it.");
         }
     }
     {
@@ -101,9 +150,12 @@ int main(int argc, char **argv) {
 
         auto t0 = Tensor4D(s0, d0);
         auto t1 = Tensor4D(s1, d1);
+				printf("adding\n");
         t0 += t1;
-        for (unsigned int i = 0; i < sizeof(d0) / sizeof(int); i++) {
-            ASSERT(t0.data[i] == t0.data[i] + 1, "Every element of t0 should be incremented by 1 after adding t1 to it.");
+				printf("ok\n");
+        for (unsigned int i = 0; i < sizeof(d0) / sizeof(double); i++) {
+					printf("i=%d, t0=%.2f, d0=%.2f\n", i, t0.data[i], d0[i]);
+            ASSERT(t0.data[i] == d0[i] + 1, "Every element of t0 should be incremented by 1 after adding t1 to it.");
         }
     }
 }

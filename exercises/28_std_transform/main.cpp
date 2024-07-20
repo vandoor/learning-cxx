@@ -7,7 +7,10 @@
 // READ: `std::vector::begin` <https://zh.cppreference.com/w/cpp/container/vector/begin>
 
 int main(int argc, char **argv) {
+		using namespace std::string_literals;
     std::vector<int> val{8, 13, 21, 34, 55};
+		std::vector<std::string> ans(val.size());
+		std::transform(val.begin(), val.end(), ans.begin(), [](int x)->std::string {return std::to_string(2*x);});
     // TODO: 调用 `std::transform`，将 `v` 中的每个元素乘以 2，并转换为字符串，存入 `ans`
     // std::vector<std::string> ans
     ASSERT(ans.size() == val.size(), "ans size should be equal to val size");
